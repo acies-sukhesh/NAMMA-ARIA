@@ -1,0 +1,207 @@
+Namma Yatri — Complete Product Overview
+========================================
+
+What is Namma Yatri?
+--------------------
+Namma Yatri is an open-source, zero-commission ride-hailing application built on India's Open
+Network for Digital Commerce (ONDC) protocol. It was developed by Juspay Technologies in
+collaboration with the Government of Karnataka and the Bengaluru Metropolitan Transport
+Corporation (BMTC).
+
+The name "Namma Yatri" means "Our Commuter" in Kannada, reflecting its community-driven ethos.
+
+Zero Commission Model
+---------------------
+Unlike Ola and Uber that charge 20–30% commission per ride, Namma Yatri operates on a
+subscription model. Drivers pay a fixed weekly fee (approximately ₹25–50/week) and keep
+100% of every fare they earn. This is the platform's most powerful differentiator.
+
+Impact: A driver doing 25 rides/day at ₹150 average fare earns ₹3,750/day. With Ola/Uber
+at 25% commission, they would lose ₹937/day or ~₹28,000/month. Namma Yatri saves drivers
+this entire amount.
+
+Open Source
+-----------
+The complete Namma Yatri codebase is available on GitHub under the Apache 2.0 license.
+This enables:
+- Community contributions and audits
+- Third-party integrations
+- Trust through transparency
+- No vendor lock-in
+
+ONDC Protocol
+-------------
+Built on the Open Network for Digital Commerce (ONDC), Namma Yatri is interoperable
+with other ONDC-compliant apps. Riders on any ONDC app can book Namma Yatri drivers,
+and vice versa. This open ecosystem approach prevents monopoly formation.
+
+Cities of Operation (2025)
+--------------------------
+1. Bengaluru (Karnataka) — Largest market, 5M+ trips
+2. Chennai (Tamil Nadu)
+3. Hyderabad (Telangana)
+4. Mysuru (Karnataka)
+5. Kochi (Kerala)
+6. Mangaluru (Karnataka)
+
+Product Features (Current)
+--------------------------
+Rider Features:
+- Auto-rickshaw booking
+- Cab booking (select cities)
+- Live GPS tracking
+- SOS safety button
+- Trip sharing with contacts
+- Transparent fare display (no hidden charges)
+- UPI and cash payment
+- Multi-language support: Kannada, Tamil, Telugu, English, Hindi
+
+Driver Features:
+- Zero commission on rides
+- Weekly subscription model
+- Real-time ride requests
+- Earnings dashboard
+- Driver ratings system
+- In-app navigation
+- Driver community forums
+- 24/7 support chat
+
+Competitive Positioning
+-----------------------
+Namma Yatri vs Ola:
+- Commission: 0% vs 20–25%
+- Model: Subscription vs Per-ride cut
+- Pricing: Market-determined vs Surge pricing
+- Philosophy: Driver-first vs Investor-first
+- Code: Open source vs Proprietary
+
+Namma Yatri vs Uber:
+- Commission: 0% vs 25–30%
+- Coverage: Regional (South India) vs National/Global
+- Support: Community-driven vs Corporate
+- Pricing: Transparent vs Dynamic surge
+
+Namma Yatri vs Rapido:
+- Vehicle type: Autos & Cabs vs Bikes & Autos
+- Commission: 0% vs 15–20%
+- ONDC: Yes vs No
+
+Technology Stack
+----------------
+Frontend: React Native (Android & iOS)
+Backend: Haskell (Beckn/ONDC protocol layer), Node.js microservices
+Database: PostgreSQL, Redis
+Infrastructure: AWS (EC2, S3, RDS)
+Maps: Google Maps API
+Payments: Juspay (UPI aggregator)
+Protocol: Beckn Protocol 1.1 (ONDC)
+
+Key Metrics (2024–2025)
+------------------------
+- Total trips completed: 50 lakh+ (5 million+)
+- Active cities: 6+
+- Registered drivers: 200,000+
+- App downloads: 3 million+
+- Average trip rating: 4.3/5
+- Driver satisfaction score: 78%
+
+Business Model
+--------------
+Revenue Streams:
+1. Driver subscription fees (primary) — ₹25–50/week per driver
+2. ONDC network participation fees
+3. B2B corporate accounts (planned)
+4. Data analytics services (planned)
+
+Cost Structure:
+- Engineering and product team
+- Cloud infrastructure (AWS)
+- Driver support and onboarding
+- Marketing and city expansion
+
+Product Roadmap Themes 2025–2026
+---------------------------------
+Q1 2026: Safety & Trust
+- Emergency SOS enhancements
+- Driver background verification upgrades
+- Ride recording feature (audio)
+- Women-preferred driver option
+
+Q2 2026: Retention & Engagement
+- Scheduled rides (advance booking up to 24 hours)
+- Driver gamification (streaks, badges, leaderboards)
+- Rider loyalty points program
+- In-app driver-rider chat
+
+Q3 2026: Growth & Expansion
+- Bike taxi vertical launch (Bengaluru pilot)
+- New city expansion (Pune, Coimbatore)
+- Corporate ride accounts
+- Namma Yatri for Business
+
+Q4 2026: Intelligence & Optimization
+- AI-powered demand prediction
+- Dynamic driver positioning
+- Personalized ETA accuracy
+- Smart route optimization
+
+Pain Points Reported (User Research)
+-------------------------------------
+Rider Pain Points:
+1. Long wait times during off-peak hours
+2. No advance/scheduled booking option
+3. Driver cancellations after acceptance
+4. Limited cab availability (mostly autos)
+5. No in-app customer support chat
+6. App crashes on low-end Android devices
+7. No bill/invoice generation for corporate users
+
+Driver Pain Points:
+1. Low ride density in suburban areas
+2. No heat map showing demand zones
+3. App battery drain during long shifts
+4. Limited earnings analytics
+5. No insurance or benefits program
+6. Difficulty with non-tech-savvy drivers using app
+
+Feature Requests (Community)
+------------------------------
+Most Requested by Riders:
+1. Schedule rides in advance
+2. Cab options (not just autos)
+3. Package delivery service
+4. Women-safety features
+5. Corporate billing
+
+Most Requested by Drivers:
+1. Daily/weekly earnings summary PDF
+2. Driver community events
+3. Fuel price integration
+4. Health insurance tie-ups
+5. Driver training programs
+
+Namma Yatri Community
+---------------------
+Namma Yatri has a strong community of:
+- Driver WhatsApp groups in each city
+- Open source contributors on GitHub
+- Product feedback forums
+- Government stakeholder working groups
+
+The community model is core to Namma Yatri's identity — it is not just an app but a
+movement to make urban mobility fair, transparent, and driver-friendly.
+
+Government Backing
+------------------
+- Karnataka government formally endorsed and promoted Namma Yatri
+- BBMP (Bruhat Bengaluru Mahanagara Palike) partnership
+- BMTC integration discussions for multimodal transport
+- Auto driver unions officially recommend the platform
+- Featured in India's ONDC success stories
+
+Social Impact
+-------------
+- Drivers earn ₹15,000–35,000/month more than on commission platforms
+- Reduced exploitative practices from aggregator platforms
+- Created a replicable zero-commission model for other cities
+- Inspired similar initiatives in other Indian states

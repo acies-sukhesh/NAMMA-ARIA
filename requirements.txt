@@ -1,0 +1,16 @@
+langchain
+langchain-core
+langchain-community
+langchain-text-splitters
+langchain-pinecone
+langchain-groq
+langchain-huggingface
+langgraph
+groq
+sentence-transformers
+huggingface-hub
+pinecone
+streamlit
+tavily-python
+python-dotenv
+-e .

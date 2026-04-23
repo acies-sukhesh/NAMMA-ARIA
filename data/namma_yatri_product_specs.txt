@@ -1,0 +1,246 @@
+Namma Yatri — Product Specifications & Feature Documentation
+=============================================================
+
+BOOKING FLOW
+============
+
+Rider Booking Flow (Current):
+1. Open app → Location auto-detected via GPS
+2. Enter destination in search bar
+3. View fare estimate (transparent, no hidden charges)
+4. Confirm booking → Nearest available driver notified
+5. Driver accepts → Rider sees driver name, photo, vehicle, plate number
+6. Real-time GPS tracking on map
+7. Trip starts → Timer and distance tracked
+8. Trip ends → Fare calculated → Payment via UPI or cash
+9. Both rider and driver rate each other (1–5 stars)
+
+Driver Acceptance Flow:
+1. Driver receives ride request notification (sound + vibration)
+2. 30-second window to accept or decline
+3. If declined or timeout → Next nearest driver notified
+4. Driver navigates to pickup using in-app maps (Google Maps integration)
+5. Driver marks "Arrived at pickup"
+6. Rider boards → Driver starts trip
+7. End trip at destination → Earnings credited instantly
+
+FARE CALCULATION
+================
+Formula: Base Fare + (Distance Rate × km) + (Time Rate × minutes)
+
+Auto-rickshaw (Bengaluru 2025):
+- Base fare: ₹30
+- Per km: ₹15
+- Per minute (traffic): ₹1.5
+- Minimum fare: ₹50
+- No surge pricing (unlike Ola/Uber)
+
+Note: Fare structure follows Karnataka government's meter fare regulations.
+Namma Yatri does NOT add commission or service fees on top of meter fare.
+
+SAFETY FEATURES
+===============
+Current Safety Implementation:
+1. SOS Button
+   - Single tap sends emergency alert
+   - Shares live location with 3 emergency contacts
+   - Calls nearest police station (planned)
+
+2. Trip Sharing
+   - Share live trip link with family/friends
+   - Link shows: driver name, vehicle, current location, destination, ETA
+
+3. Driver Verification
+   - Aadhaar-based identity verification
+   - Vehicle RC (Registration Certificate) verification
+   - Police clearance certificate
+   - Annual re-verification required
+
+4. In-App Safety Guidelines
+   - Pre-trip checklist for riders
+   - Safety tips displayed before night trips (after 10 PM)
+
+Planned Safety Features (Q1 2026):
+- Audio recording of trips (stored encrypted, accessed only if complaint)
+- Women-preferred driver option
+- Virtual number masking for calls between rider and driver
+
+DRIVER APP FEATURES
+===================
+Earnings:
+- Real-time earnings counter during shift
+- Daily earnings summary (₹X from Y rides)
+- Weekly earnings report (downloadable)
+- Subscription fee auto-deduction notification
+
+Shift Management:
+- Go online/offline toggle
+- Break mode (pauses requests without going offline)
+- Maximum hours alert (12-hour limit for safety)
+
+Navigation:
+- Integrated Google Maps turn-by-turn navigation
+- Auto-suggests route to pickup first, then destination
+- Traffic-aware routing
+
+Driver Support:
+- In-app chat support (Mon–Sat, 9 AM – 6 PM)
+- Driver helpline number
+- Community WhatsApp groups (city-specific)
+- Driver FAQ knowledge base
+
+RATING SYSTEM
+=============
+Rider Rating:
+- Rated by driver after each trip (1–5 stars)
+- Factors: Punctuality at pickup, behavior, accurate destination
+- Riders below 3.5 rating see warning
+
+Driver Rating:
+- Rated by rider after each trip (1–5 stars)
+- Factors: Punctuality, cleanliness, driving quality, politeness
+- Drivers below 4.0 rating get coaching alert
+- Drivers below 3.5 rating suspended pending review
+
+PAYMENT METHODS
+===============
+Currently Supported:
+1. UPI (PhonePe, GPay, Paytm, any UPI app)
+2. Cash
+3. Namma Yatri wallet (coming Q2 2026)
+
+Not Supported (yet):
+- Credit/debit cards
+- EMI options
+- Corporate billing/invoicing
+
+NOTIFICATIONS
+=============
+Rider Notifications:
+- Driver assigned (with ETA)
+- Driver arrived at pickup
+- Trip started
+- Trip completed + fare breakdown
+- Rating reminder
+- Promotional offers
+
+Driver Notifications:
+- New ride request (30-second accept window)
+- Ride cancelled by rider
+- Weekly earnings summary
+- Low driver supply in your area (surge zone alert)
+- Subscription renewal reminder
+
+API ARCHITECTURE (ONDC Layer)
+==============================
+Namma Yatri implements the Beckn Protocol for ONDC:
+
+Search (Discovery):
+POST /search
+{
+  "context": { "domain": "mobility", "action": "search" },
+  "message": {
+    "intent": {
+      "fulfillment": {
+        "start": { "location": { "gps": "12.9716,77.5946" } },
+        "end": { "location": { "gps": "12.9352,77.6245" } }
+      }
+    }
+  }
+}
+
+Select (Choose provider):
+POST /select → Driver list with fare estimates
+
+Init (Confirm booking):
+POST /init → Booking initiation
+
+Confirm:
+POST /confirm → Trip confirmed
+
+Track:
+POST /track → Live GPS updates
+
+Cancel:
+POST /cancel → Cancellation
+
+Rating:
+POST /rating → Post-trip rating
+
+ANALYTICS & METRICS TRACKED
+============================
+Product Metrics:
+- DAU (Daily Active Users) — riders and drivers
+- MAU (Monthly Active Users)
+- Rides per DAU
+- Trip completion rate (= completed / initiated)
+- Cancellation rate (rider-initiated and driver-initiated)
+- Average trip fare
+- Average trip distance
+- Average trip duration
+- Driver supply/demand ratio by zone and hour
+- Driver utilization rate (online hours vs trip hours)
+- Driver churn rate (D7, D30, D90)
+- Rider retention rate (D7, D30, D90)
+- App crash rate
+- Average session duration
+- App Store rating
+
+Business Metrics:
+- Weekly subscription revenue
+- Cost per driver acquisition
+- Cost per rider acquisition
+- LTV (Lifetime Value) — rider and driver
+- Contribution margin per trip
+- City-level profitability
+
+LOCALIZATION
+============
+Supported Languages:
+- English
+- Kannada (ಕನ್ನಡ)
+- Tamil (தமிழ்)
+- Telugu (తెలుగు)
+- Hindi (हिंदी) — partial
+
+Language selection: Auto-detected from phone language setting; can be manually changed in settings.
+
+Localization scope: All UI strings, notifications, support articles, in-app FAQs.
+Not yet localized: Driver training content, complex legal/policy documents.
+
+SUBSCRIPTION MODEL DETAILS
+===========================
+Driver Subscription Tiers (2025):
+
+Basic Plan (Auto):
+- ₹25/week
+- Unlimited rides
+- Basic support
+- Community access
+
+Plus Plan (Cab):
+- ₹50/week
+- Unlimited rides
+- Priority support
+- Featured in search results (planned)
+
+Trial Period:
+- First 4 weeks free for new drivers
+- Full feature access during trial
+- No credit card required
+
+Subscription Management:
+- Auto-renews weekly via UPI mandate
+- Cancel anytime (no lock-in)
+- Pause subscription during vacation/illness
+
+INTEGRATION PARTNERS
+=====================
+Maps: Google Maps Platform
+Payments: Juspay (handles UPI, payment routing)
+Identity Verification: Digilocker (Aadhaar-based KYC)
+Cloud: Amazon Web Services (Mumbai region)
+Analytics: Internal dashboards + Metabase
+Push Notifications: Firebase Cloud Messaging (FCM)
+SMS: Exotel / MSG91
+Customer Support: Freshdesk (ticketing)
