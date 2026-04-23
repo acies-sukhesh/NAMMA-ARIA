@@ -138,53 +138,72 @@ class WorkflowState(TypedDict):
 
 def detect_workflow_type(user_message: str) -> str:
     msg = user_message.lower()
-    if any(kw in msg for kw in ["start pm workflow", "full workflow", "run all steps", "autonomous pm"]):
+    if any(kw in msg for kw in ["weekly review", "full workflow", "start pm workflow", "run all steps", "autonomous pm"]):
         return "FULL_WORKFLOW"
     if any(kw in msg for kw in ["learning", "outcome", "what worked", "explain decision", "log outcome", "learning state"]):
         return "LEARNING_QUERY"
-    if any(kw in msg for kw in ["dropped", "breach", "declining", "rate fell", "kpi", "cancellation rate", "wait time", "completion rate", "driver churn", "app rating"]):
-        return "INCIDENT"
+    if any(kw in msg for kw in ["quadrant", "rice", "what should we build", "backlog", "prioritise", "prioritize", "impact analysis"]):
+        return "IMPACT_ANALYSIS"
+    if any(kw in msg for kw in ["dropped", "breach", "declining", "rate fell", "kpi", "cancellation rate", "wait time", "completion rate", "driver churn", "app rating", "spike", "anomaly"]):
+        return "KPI_INCIDENT"
     if any(kw in msg for kw in ["build", "prd", "feature", "advance booking", "design", "implement", "new feature", "scheduled ride"]):
-        return "FEATURE"
-    if any(kw in msg for kw in ["compare", "competitor", "market", "trend", "research"]):
-        return "EXPLORATION"
+        return "FEATURE_REQUEST"
+    if any(kw in msg for kw in ["compare", "competitor", "ola", "uber", "rapido", "market", "trend", "research"]):
+        return "COMPETITOR_RESEARCH"
+    if any(kw in msg for kw in ["ardu", "union", "driver earnings", "subscription churn", "driver issue"]):
+        return "DRIVER_ISSUE"
     return "GENERAL"
 
 
 def get_workflow_steps(workflow_type: str) -> list:
     workflows = {
         "FULL_WORKFLOW": [
+            ("read_github_issues",      "📋 Reading GitHub Issues"),
+            ("analyze_pain_points",     "🔍 Analyzing Pain Points"),
             ("check_kpi_metrics",       "📊 Checking KPI Metrics"),
-            ("synthesize_pm_insights",  "🧠 Synthesizing PM Insights"),
-            ("run_root_cause_analysis", "🔬 Running Root Cause Analysis"),
-            ("ai_prioritize_issues",    "🎯 AI-Driven Prioritization"),
-            ("check_consultation_gate", "🛡️ Consultation & Compliance Gate"),
+            ("run_mission_filter",      "✅ Mission Filter"),
+            ("prioritize_with_rice",    "🎯 RICE Prioritization"),
+            ("generate_impact_quadrant","📈 Impact Quadrant"),
             ("generate_solution",       "💡 Generating Solution"),
             ("generate_prd",            "📝 Writing PRD"),
             ("create_jira_stories",     "🎫 Creating Jira Stories"),
             ("generate_roadmap",        "🗺️ Generating Roadmap"),
         ],
-        "INCIDENT": [
+        "KPI_INCIDENT": [
             ("check_kpi_metrics",       "📊 Checking KPI Metrics"),
-            ("synthesize_pm_insights",  "🧠 Synthesizing PM Insights"),
-            ("run_root_cause_analysis", "🔬 Running Root Cause Analysis"),
-            ("ai_prioritize_issues",    "🎯 AI-Driven Prioritization"),
-            ("check_consultation_gate", "🛡️ Consultation & Compliance Gate"),
+            ("analyze_pain_points",     "🔍 Analyzing Root Cause"),
+            ("run_mission_filter",      "✅ Mission Filter"),
+            ("prioritize_with_rice",    "🎯 RICE Prioritization"),
             ("generate_solution",       "💡 Generating Solution"),
             ("generate_prd",            "📝 Writing PRD"),
             ("create_jira_stories",     "🎫 Creating Jira Stories"),
         ],
-        "FEATURE": [
-            ("analyze_pain_points",     "📊 Validating Problem"),
-            ("evaluate_pm_decision",    "⚖️ PM Framework Evaluation"),
-            ("check_consultation_gate", "🛡️ Consultation & Compliance Gate"),
-            ("generate_prd",            "📝 Writing PRD"),
-            ("create_jira_stories",     "🎫 Creating Jira Stories"),
-            ("generate_roadmap",        "🗺️ Adding to Roadmap"),
+        "FEATURE_REQUEST": [
+            ("search_namma_yatri_reviews", "🔍 Researching User Signals"),
+            ("analyze_pain_points",        "📊 Validating Problem"),
+            ("run_mission_filter",         "✅ Mission Filter"),
+            ("generate_prd",               "📝 Writing PRD"),
+            ("create_jira_stories",        "🎫 Creating Jira Stories"),
+            ("generate_roadmap",           "🗺️ Adding to Roadmap"),
         ],
-        "EXPLORATION": [
-            ("search_competitor_data", "🔍 Competitor Analysis"),
-            ("search_market_trends",   "📊 Market Trends"),
+        "IMPACT_ANALYSIS": [
+            ("search_namma_yatri_reviews", "🔍 Gathering User Signals"),
+            ("search_competitor_data",     "🏁 Competitor Analysis"),
+            ("analyze_pain_points",        "📊 Extracting Pain Points"),
+            ("run_mission_filter",         "✅ Mission Filter"),
+            ("prioritize_with_rice",       "🎯 RICE Scoring"),
+            ("generate_impact_quadrant",   "📈 Impact Quadrant"),
+        ],
+        "COMPETITOR_RESEARCH": [
+            ("search_competitor_data", "🏁 Competitor Analysis"),
+            ("search_market_trends",   "📈 Market Trends"),
+        ],
+        "DRIVER_ISSUE": [
+            ("search_driver_feedback",     "🚗 Driver Feedback Search"),
+            ("analyze_pain_points",        "🔍 Analyzing Driver Issues"),
+            ("run_mission_filter",         "✅ Mission Filter"),
+            ("generate_prd",               "📝 Writing PRD"),
+            ("generate_stakeholder_brief", "📋 ARDU Brief"),
         ],
         "LEARNING_QUERY": [
             ("get_learning_state_tool", "📈 Fetching Learning State"),
@@ -244,42 +263,60 @@ def run_direct_pipeline(user_message: str, step_callback=None) -> dict:
 def _call_tool_direct(tool_name: str, ctx: dict, T) -> str:
     """Dispatch a single tool call using the accumulated context dict."""
 
+    # ── v2 mission + RICE tools ────────────────────────────────────────────────
+
+    if tool_name == "run_mission_filter":
+        payload = json.dumps({
+            "feature_name": _top_issue_title(ctx),
+            "solution":     ctx.get("solution", ctx.get("problem", "")),
+        })
+        return T.run_mission_filter.func(payload)
+
+    if tool_name == "prioritize_with_rice":
+        pain_points = ctx.get("pain_points") or _build_pain_points_from_ctx(ctx)
+        return T.prioritize_with_rice.func(json.dumps({"pain_points": pain_points}))
+
+    if tool_name == "generate_impact_quadrant":
+        rice_raw = ctx.get("prioritize_with_rice") or json.dumps(ctx)
+        return T.generate_impact_quadrant.func(rice_raw)
+
+    if tool_name == "generate_experiment_brief":
+        payload = json.dumps({
+            "feature_name": ctx.get("feature_name", _top_issue_title(ctx)),
+            "solution":     ctx.get("solution", ""),
+        })
+        return T.generate_experiment_brief.func(payload)
+
+    if tool_name == "generate_stakeholder_brief":
+        payload = json.dumps({
+            "feature_name": ctx.get("feature_name", _top_issue_title(ctx)),
+            "audience":     "ARDU",
+        })
+        return T.generate_stakeholder_brief.func(payload)
+
     # ── Analysis tools (pure Python, no LLM) ──────────────────────────────────
 
     if tool_name == "check_kpi_metrics":
         return T.check_kpi_metrics.func("")
 
     if tool_name == "synthesize_pm_insights":
-        # Pass the full KPI JSON
         kpi_src = ctx.get("check_kpi_metrics") or json.dumps({"metrics": ctx.get("metrics", {}), "breached_kpis": ctx.get("breached_kpis", [])})
         return T.synthesize_pm_insights.func(kpi_src)
 
     if tool_name == "run_root_cause_analysis":
         title = _top_issue_title(ctx)
-        context_json = json.dumps({
-            "breached_kpis": ctx.get("breached_kpis", []),
-            "metrics":       ctx.get("metrics", {}),
-        })
+        context_json = json.dumps({"breached_kpis": ctx.get("breached_kpis", []), "metrics": ctx.get("metrics", {})})
         return T.run_root_cause_analysis.func(title, context_json)
 
     if tool_name == "ai_prioritize_issues":
         pain_points = ctx.get("pain_points") or _build_pain_points_from_ctx(ctx)
-        payload = json.dumps({
-            "pain_points":  pain_points,
-            "breached_kpis": ctx.get("breached_kpis", []),
-        })
-        return T.ai_prioritize_issues.func(payload)
+        return T.ai_prioritize_issues.func(json.dumps({"pain_points": pain_points, "breached_kpis": ctx.get("breached_kpis", [])}))
 
     if tool_name == "evaluate_pm_decision":
-        issue_json   = json.dumps({"title": _top_issue_title(ctx)})
-        context_json = json.dumps({"breached_kpis": ctx.get("breached_kpis", [])})
-        return T.evaluate_pm_decision.func(issue_json, context_json)
+        return T.evaluate_pm_decision.func(json.dumps({"title": _top_issue_title(ctx)}), json.dumps({"breached_kpis": ctx.get("breached_kpis", [])}))
 
     if tool_name == "check_consultation_gate":
-        top  = _top_issue(ctx)
-        title   = top.get("title", _top_issue_title(ctx))
-        solution = ctx.get("solution", ctx.get("feature_name", ""))
-        return T.check_consultation_gate.func(title, str(solution), "")
+        return T.check_consultation_gate.func(_top_issue(ctx).get("title", _top_issue_title(ctx)), str(ctx.get("solution", "")), "")
 
     if tool_name == "get_learning_state_tool":
         return T.get_learning_state_tool.func("")

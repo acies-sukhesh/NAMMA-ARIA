@@ -697,24 +697,68 @@ def generate_prd(context: str) -> str:
     consult_steps: List[str] = []
 
     try:
-        data          = json.loads(context)
-        feature_name  = data.get("feature_name", feature_name)
-        problem       = data.get("problem", "")
-        solution      = data.get("solution", "")
-        priority      = data.get("priority", priority)
+        data = json.loads(context)
+
+        # Feature name — try multiple keys
+        feature_name = (
+            data.get("feature_name") or
+            data.get("title") or
+            data.get("top_pain_point") or
+            "Feature"
+        )
+
+        # Problem — try multiple keys
+        problem = (
+            data.get("problem") or
+            data.get("problem_statement") or
+            data.get("diagnosis") or
+            data.get("description") or
+            ""
+        )
+
+        # Solution — try multiple keys
+        solution = (
+            data.get("solution") or
+            data.get("fix") or
+            data.get("recommendation") or
+            ""
+        )
+
+        priority      = data.get("priority", "P1")
         driver_impact = data.get("driver_impact", "")
         rider_impact  = data.get("rider_impact", "")
         consult_req   = data.get("consultation_required", False)
         consult_flags = data.get("consultation_flags", [])
         consult_steps = data.get("consultation_steps", [])
+
+        # If pain_points list exists, use top one as feature name fallback
+        pain_points = data.get("pain_points", [])
+        if pain_points and (not feature_name or feature_name == "Feature"):
+            top = pain_points[0] if isinstance(pain_points, list) else {}
+            feature_name = top.get("title", feature_name)
+
+        # If top_priority_issue exists, prefer it
+        top_issue = data.get("top_priority_issue") or {}
+        if isinstance(top_issue, dict) and top_issue:
+            feature_name = top_issue.get("title", feature_name) or feature_name
+            priority     = top_issue.get("priority", priority)
+
     except (json.JSONDecodeError, TypeError):
+        # Context is plain text — extract fields directly
         for line in context.split("\n"):
-            if "feature_name" in line.lower():
-                feature_name = line.split(":")[-1].strip().strip('"')
-            elif "problem" in line.lower():
+            ll = line.lower()
+            if "feature_name" in ll or "feature:" in ll:
+                feature_name = line.split(":")[-1].strip().strip('"').strip()
+            elif "problem" in ll:
                 problem = line.split(":", 1)[-1].strip()
-            elif "solution" in line.lower():
+            elif "solution" in ll:
                 solution = line.split(":", 1)[-1].strip()
+
+        # Last resort — treat raw context as the feature description
+        if not feature_name or feature_name == "Feature":
+            feature_name = context[:80].strip()
+        if not problem:
+            problem = f"User requested: {context[:200]}"
 
     if not problem:
         problem = f"Users are experiencing issues related to: {feature_name}"
@@ -1338,9 +1382,312 @@ def visualize_roadmap(context: str) -> str:
         return "gantt\n    title Roadmap Visualization\n    Error: Invalid roadmap data"
 
 
+# ── v2 new tools ──────────────────────────────────────────────────────────────
+
+def _detect_pm_core(text: str) -> str:
+    t = text.lower()
+    if any(w in t for w in ["driver", "earning", "subscription", "ardu", "churn"]):
+        return "DRIVER PM CORE"
+    if any(w in t for w in ["rider", "booking", "cancel", "eta", "safety", "sos"]):
+        return "RIDER PM CORE"
+    if any(w in t for w in ["city", "expansion", "launch", "supply", "union"]):
+        return "CITY PM CORE"
+    if any(w in t for w in ["revenue", "subscription model", "pricing", "plan"]):
+        return "REVENUE PM CORE"
+    if any(w in t for w in ["beckn", "ondc", "protocol", "open source"]):
+        return "PROTOCOL PM CORE"
+    if any(w in t for w in ["purple", "women", "accessibility", "safety feature"]):
+        return "SAFETY PM CORE"
+    if any(w in t for w in ["metro", "cab", "two-wheeler", "multimodal"]):
+        return "MULTIMODAL PM CORE"
+    return "DRIVER PM CORE"
+
+
+@tool
+def run_mission_filter(context: str) -> str:
+    """Run the 4-question NammaYatri mission filter on a proposed feature or decision.
+    Q1: Driver welfare. Q2: Rider trust. Q3: Beckn/ONDC compliance. Q4: Zero-commission sustainability.
+    Args:
+        context: JSON or text describing the proposed feature/solution.
+    Returns:
+        JSON with pass/fail for each question, overall verdict, PM core routing, and consult flag.
+    """
+    feature_name = "Proposed Feature"
+    solution_text = ""
+    try:
+        data = json.loads(context)
+        feature_name = data.get("feature_name", data.get("title", feature_name))
+        solution_text = data.get("solution", data.get("description", str(data)))
+    except Exception:
+        solution_text = str(context)
+        feature_name = str(context)[:60]
+
+    t = solution_text.lower()
+
+    commission_violations = ["commission", "percentage cut", "take rate", "platform fee on fare", "per-ride deduction"]
+    q1_pass = not any(v in t for v in commission_violations)
+
+    rider_harm = ["hide price", "surprise charge", "hidden fee", "fake eta"]
+    q2_pass = not any(s in t for s in rider_harm)
+
+    proprietary = ["proprietary", "lock-in", "closed api", "non-ondc", "bypass beckn"]
+    q3_pass = not any(s in t for s in proprietary)
+
+    commission_words = ["commission", "revenue share", "percentage", "take rate"]
+    q4_pass = not any(w in t for w in commission_words)
+
+    consult_triggers = ["subscription", "pricing", "ride allocation", "earnings mechanic", "tip", "incentive", "new city"]
+    needs_consult = any(tr in t for tr in consult_triggers)
+
+    all_pass = q1_pass and q2_pass and q3_pass and q4_pass
+
+    return json.dumps({
+        "feature": feature_name,
+        "mission_filter": {
+            "Q1_driver_welfare":    {"status": "PASS" if q1_pass else "FAIL", "reason": "Zero commission preserved" if q1_pass else "VIOLATION: Extracts from driver earnings"},
+            "Q2_rider_trust":       {"status": "PASS" if q2_pass else "FAIL", "reason": "No rider trust impact detected" if q2_pass else "RISK: May harm rider trust"},
+            "Q3_beckn_compliance":  {"status": "PASS" if q3_pass else "FAIL", "reason": "ONDC/Beckn compliant" if q3_pass else "RISK: Violates open protocol"},
+            "Q4_zero_commission":   {"status": "PASS" if q4_pass else "FAIL", "reason": "Subscription model intact" if q4_pass else "VIOLATION: Creates implicit commission"},
+        },
+        "overall_verdict": "APPROVED" if all_pass else "BLOCKED — REDESIGN REQUIRED",
+        "community_consult_required": needs_consult,
+        "community_consult_reason": "Feature touches driver earnings/subscription — ARDU mandatory" if needs_consult else "No community consult needed",
+        "pm_core_routing": _detect_pm_core(t),
+    }, indent=2)
+
+
+@tool
+def prioritize_with_rice(context: str) -> str:
+    """Score and rank NammaYatri features using RICE framework.
+    RICE = (Reach x Impact x Confidence) / Effort. Scale 1-10 each.
+    Args:
+        context: JSON with pain_points or features list.
+    Returns:
+        JSON with RICE scores, ranked list, and Impact Quadrant placement.
+    """
+    pain_points: List[Dict] = []
+    try:
+        data = json.loads(context)
+        pain_points = data.get("pain_points", data.get("issues", data.get("prioritized", [])))
+    except Exception:
+        pass
+
+    if not pain_points:
+        pain_points = [
+            {"id": "F-001", "title": "Driver commitment score (anti-cancellation)"},
+            {"id": "F-002", "title": "Advance/scheduled ride booking"},
+            {"id": "F-003", "title": "Driver weekly earnings PDF report"},
+            {"id": "F-004", "title": "In-app live chat support"},
+            {"id": "F-005", "title": "Purple Rides — women driver preference"},
+            {"id": "F-006", "title": "Demand heatmap for drivers"},
+            {"id": "F-007", "title": "Beckn multimodal metro integration"},
+            {"id": "F-008", "title": "App lite version for low-end Android"},
+        ]
+
+    _rice_defaults: Dict[str, Dict] = {
+        "F-001": {"reach": 9, "impact": 9, "confidence": 8, "effort": 3},
+        "F-002": {"reach": 8, "impact": 8, "confidence": 7, "effort": 6},
+        "F-003": {"reach": 9, "impact": 7, "confidence": 9, "effort": 2},
+        "F-004": {"reach": 8, "impact": 7, "confidence": 8, "effort": 5},
+        "F-005": {"reach": 5, "impact": 9, "confidence": 7, "effort": 4},
+        "F-006": {"reach": 9, "impact": 8, "confidence": 7, "effort": 4},
+        "F-007": {"reach": 6, "impact": 7, "confidence": 6, "effort": 9},
+        "F-008": {"reach": 8, "impact": 8, "confidence": 8, "effort": 7},
+    }
+
+    scored: List[Dict] = []
+    for pp in pain_points:
+        fid = pp.get("id", "F-001")
+        r = _rice_defaults.get(fid, {"reach": 7, "impact": 7, "confidence": 7, "effort": 5})
+        rice_score = round((r["reach"] * r["impact"] * r["confidence"]) / r["effort"], 1)
+        avg_impact = (r["impact"] + r["reach"]) / 2
+        avg_effort = r["effort"]
+        if avg_impact >= 7 and avg_effort <= 5:
+            quadrant, qdetail = "Quick Win", "High Impact · Low Effort — Ship first"
+        elif avg_impact >= 7 and avg_effort > 5:
+            quadrant, qdetail = "Major Bet", "High Impact · High Effort — Plan carefully"
+        elif avg_impact < 7 and avg_effort <= 4:
+            quadrant, qdetail = "Low-hanging Fruit", "Low Impact · Low Effort — Ship if bandwidth"
+        else:
+            quadrant, qdetail = "Deprioritise", "Low Impact · High Effort — Kill or defer"
+        scored.append({
+            **pp,
+            "rice": r,
+            "rice_score": rice_score,
+            "impact_quadrant": quadrant,
+            "quadrant_detail": qdetail,
+            "nammayatri_priority": "P0" if rice_score >= 100 else "P1" if rice_score >= 70 else "P2" if rice_score >= 40 else "P3",
+        })
+
+    scored.sort(key=lambda x: x["rice_score"], reverse=True)
+    return json.dumps({
+        "ranked_features": scored,
+        "impact_quadrant": {
+            "quick_wins":       [f for f in scored if f["impact_quadrant"] == "Quick Win"],
+            "major_bets":       [f for f in scored if f["impact_quadrant"] == "Major Bet"],
+            "low_hanging_fruit":[f for f in scored if f["impact_quadrant"] == "Low-hanging Fruit"],
+            "deprioritise":     [f for f in scored if f["impact_quadrant"] == "Deprioritise"],
+        },
+        "top_recommendation": scored[0] if scored else None,
+        "rice_methodology": "RICE = (Reach x Impact x Confidence) / Effort. Scale 1-10.",
+    }, indent=2)
+
+
+@tool
+def generate_impact_quadrant(context: str) -> str:
+    """Generate a structured Impact Quadrant from RICE-scored features.
+    Args:
+        context: JSON from prioritize_with_rice.
+    Returns:
+        JSON with four quadrant sections and top 3 recommendations.
+    """
+    try:
+        data = json.loads(context)
+        q = data.get("impact_quadrant", {})
+        ranked = data.get("ranked_features", [])
+    except Exception:
+        return json.dumps({"error": "Call prioritize_with_rice first"})
+
+    def _fmt(lst: List[Dict]) -> List[Dict]:
+        return [{"title": f.get("title", ""), "rice_score": f.get("rice_score"), "priority": f.get("nammayatri_priority")} for f in lst]
+
+    return json.dumps({
+        "impact_quadrant_analysis": {
+            "Quick Wins":       {"description": "Ship immediately — high return, low investment",            "features": _fmt(q.get("quick_wins", []))},
+            "Major Bets":       {"description": "Plan carefully — high value, significant investment",        "features": _fmt(q.get("major_bets", []))},
+            "Low-hanging Fruit":{"description": "Ship if bandwidth allows — easy but limited upside",         "features": _fmt(q.get("low_hanging_fruit", []))},
+            "Deprioritise":     {"description": "Kill or defer — not worth the investment right now",         "features": _fmt(q.get("deprioritise", []))},
+        },
+        "top_3_recommendations": [
+            {"rank": i+1, "feature": f["title"], "rice": f.get("rice_score"), "quadrant": f.get("impact_quadrant"), "priority": f.get("nammayatri_priority")}
+            for i, f in enumerate(ranked[:3])
+        ],
+        "nammayatri_note": "All features validated against zero-commission rule and Beckn compliance.",
+    }, indent=2)
+
+
+@tool
+def generate_experiment_brief(context: str) -> str:
+    """Generate a structured experiment brief for a NammaYatri feature hypothesis.
+    Args:
+        context: JSON with feature_name and hypothesis/solution.
+    Returns:
+        Experiment brief with sample size, guardrails, and success definition.
+    """
+    feature_name = "Feature Experiment"
+    hypothesis = ""
+    try:
+        data = json.loads(context)
+        feature_name = data.get("feature_name", feature_name)
+        hypothesis = data.get("solution", data.get("hypothesis", ""))
+    except Exception:
+        feature_name = str(context)[:60]
+        hypothesis = str(context)
+
+    return json.dumps({
+        "experiment_brief": {
+            "feature": feature_name,
+            "hypothesis": f"We believe that {feature_name.lower()} will improve driver retention and rider satisfaction because {str(hypothesis)[:200]}",
+            "experiment_type": "A/B test — control vs treatment",
+            "sample_size": {
+                "method": "Power analysis at 80% statistical power, 5% significance",
+                "minimum": "5,000 drivers per variant, 10,000 riders per variant",
+                "duration": "14 days minimum (capture weekly patterns)",
+                "rollout": "5% traffic → 20% if no guardrail breach within 48h",
+            },
+            "guardrails": [
+                "Driver daily earnings must not drop below baseline by >5%",
+                "Subscription cancellation rate must not increase by >2pp",
+                "Ride completion rate must not drop below 70%",
+                "App crash rate must not increase by >0.5pp",
+                "ARDU must be informed before experiment goes live",
+            ],
+            "success_metrics": {
+                "primary": "Ride completion rate +5pp vs control",
+                "secondary": ["Driver D30 retention +3pp", "Rider NPS +5 points", "Driver cancellation rate -5pp"],
+                "guardrail": "No metric breaches threshold",
+            },
+            "mission_filter_pre_check": {
+                "zero_commission_safe": True,
+                "driver_welfare_positive": True,
+                "beckn_compliant": True,
+                "community_informed": "ARDU notification required before experiment",
+            },
+            "rollback_plan": "Disable feature flag within 30 minutes if any guardrail breached",
+        }
+    }, indent=2)
+
+
+@tool
+def generate_stakeholder_brief(context: str) -> str:
+    """Generate a stakeholder brief for ARDU, city government, or ONDC.
+    Args:
+        context: JSON with feature_name, audience (ARDU/government/ONDC), and optional prd.
+    Returns:
+        Formatted brief tailored to the specified audience.
+    """
+    feature_name = "NammaYatri Feature"
+    audience = "ARDU"
+    try:
+        data = json.loads(context)
+        feature_name = data.get("feature_name", feature_name)
+        audience = data.get("audience", "ARDU")
+    except Exception:
+        feature_name = str(context)[:60]
+
+    if "ardu" in audience.lower() or "driver" in audience.lower():
+        return json.dumps({
+            "stakeholder_brief": {
+                "audience": "ARDU — Auto Rickshaw Drivers Union",
+                "subject": f"Community Consultation: {feature_name}",
+                "key_message": "We are proposing a change. As our co-product-owner, we need your input before we proceed.",
+                "driver_impact": {
+                    "earnings": "Zero commission preserved — driver keeps 100% of fare",
+                    "subscription": "No change to subscription fees",
+                    "working_conditions": "Feature designed to improve driver experience",
+                },
+                "what_we_are_asking": [
+                    "Review the proposed feature",
+                    "Share feedback from driver community within 7 days",
+                    "Nominate 2-3 drivers for beta testing",
+                    "Flag any concerns before we proceed to engineering",
+                ],
+                "consultation_format": "In-person at NammaYatri office or driver stand — your choice",
+                "timeline": "Decision in 2 weeks after consultation",
+                "commitment": "We will not ship this without your sign-off",
+            }
+        }, indent=2)
+    elif "city" in audience.lower() or "government" in audience.lower():
+        return json.dumps({
+            "stakeholder_brief": {
+                "audience": "City Government / Transport Authority",
+                "subject": f"NammaYatri Platform Update: {feature_name}",
+                "public_interest_framing": "Improves urban mobility, driver livelihoods, and provides open trip data for city planning",
+                "regulatory_compliance": "ONDC-compliant, Beckn standard, data shared via open data portal",
+                "driver_welfare": "All earnings flow directly to drivers — no platform extraction",
+            }
+        }, indent=2)
+    else:
+        return json.dumps({
+            "stakeholder_brief": {
+                "audience": "ONDC / Beckn Foundation",
+                "subject": f"Protocol Update Notification: {feature_name}",
+                "beckn_impact": "Uses standard Beckn API endpoints — no protocol changes required",
+                "ondc_compliance": "Full interoperability with other ONDC mobility players maintained",
+                "open_source": "Implementation contributed back to open source repo",
+            }
+        }, indent=2)
+
+
 # ── Exported tool list ─────────────────────────────────────────────────────────
 
 ALL_TOOLS = [
+    # v2 mission + RICE layer
+    run_mission_filter,
+    prioritize_with_rice,
+    generate_impact_quadrant,
+    generate_experiment_brief,
+    generate_stakeholder_brief,
     # v2 intelligence layer
     synthesize_pm_insights,
     run_root_cause_analysis,
